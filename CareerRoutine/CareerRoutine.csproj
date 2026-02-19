@@ -12,4 +12,10 @@
     <PackageReference Include="Google.Apis.Gmail.v1" Version="1.73.0.4029" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="credentials.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
