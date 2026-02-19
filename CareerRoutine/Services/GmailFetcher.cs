@@ -4,7 +4,12 @@ using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
 using Message = Google.Apis.Gmail.v1.Data.Message;
+using HtmlAgilityPack;
+using HtmlDocument = HtmlAgilityPack.HtmlDocument;
 
 namespace CareerRoutine.Services
 {
@@ -94,14 +99,64 @@ namespace CareerRoutine.Services
 
             Traverse(message.Payload);
 
-            return (text, html);
+            // ★ text優先、無ければhtmlを整形
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                return (NormalizeText(text), html);
+            }
+            else
+            {
+                return (ConvertHtmlToText(html), html);
+            }
         }
+
         private string DecodeBase64(string input)
         {
             var bytes = Convert.FromBase64String(
                 input.Replace('-', '+').Replace('_', '/'));
 
-            return System.Text.Encoding.UTF8.GetString(bytes);
+            return Encoding.UTF8.GetString(bytes);
+        }
+        private string ConvertHtmlToText(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html))
+                return "";
+
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            // script / style を削除
+            var scripts = doc.DocumentNode.SelectNodes("//script|//style");
+            if (scripts != null)
+            {
+                foreach (var node in scripts)
+                    node.Remove();
+            }
+
+            // テキスト抽出
+            var text = doc.DocumentNode.InnerText;
+
+            // HTMLエンティティ変換 (&nbsp; → 空白など)
+            text = WebUtility.HtmlDecode(text);
+
+            // 改行整理
+            text = NormalizeText(text);
+
+            return text;
+        }
+        private string NormalizeText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+
+            text = text.Replace("\r\n", "\n").Replace("\r", "\n");
+
+            // 連続スペース削除
+            text = System.Text.RegularExpressions.Regex.Replace(text, "[ \t]+", " ");
+
+            // 3行以上の改行を2行に圧縮
+            text = System.Text.RegularExpressions.Regex.Replace(text, "\n{3,}", "\n\n");
+
+            return text.Trim();
         }
     }
 }

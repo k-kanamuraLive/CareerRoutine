@@ -36,6 +36,7 @@
             // 
             // progressBar1
             // 
+            progressBar1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             progressBar1.Location = new Point(0, 0);
             progressBar1.Name = "progressBar1";
             progressBar1.Size = new Size(799, 23);
@@ -63,6 +64,7 @@
             // 
             // ContentaTextBox
             // 
+            ContentaTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             ContentaTextBox.Location = new Point(12, 58);
             ContentaTextBox.Multiline = true;
             ContentaTextBox.Name = "ContentaTextBox";
