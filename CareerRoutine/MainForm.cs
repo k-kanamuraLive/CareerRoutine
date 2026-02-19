@@ -1,10 +1,10 @@
+using CareerRoutine.Services;
+using Google.Apis.Gmail.v1;
+using CareerRoutine.Models;
+using System.Xml;
+
 namespace CareerRoutine
 {
-    using CareerRoutine.Services;
-    using Google.Apis.Gmail.v1;
-    using CareerRoutine.Models;
-    using System.Xml;
-
     public partial class MainForm : Form
     {
         private readonly GmailFetcher _fetcher =

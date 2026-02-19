@@ -1,14 +1,8 @@
 ﻿using CareerRoutine.Models;
-using Google.Apis.Auth.OAuth2;
-using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
-using Google.Apis.Services;
-using Google.Apis.Util.Store;
 using System.Net;
 using System.Text;
-using System.Text.RegularExpressions;
 using Message = Google.Apis.Gmail.v1.Data.Message;
-using HtmlAgilityPack;
 using HtmlDocument = HtmlAgilityPack.HtmlDocument;
 
 namespace CareerRoutine.Services
