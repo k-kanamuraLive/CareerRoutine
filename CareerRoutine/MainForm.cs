@@ -1,5 +1,7 @@
 using CareerRoutine.Services;
 using CareerRoutine.Models;
+using System.Diagnostics;
+using CareerRoutine.Analizers;
 
 namespace CareerRoutine
 {
@@ -58,6 +60,10 @@ namespace CareerRoutine
 
             var jobs = await _fetcher.FetchAsync(progress, cursorDate);
             _today = _matcher.PickOne(jobs);
+
+#if DEBUG
+            Analizer.Output(jobs);
+#endif
 
             lnkOpen.Text = "";
 
