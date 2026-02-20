@@ -32,6 +32,9 @@
             btnFetch = new Button();
             lnkOpen = new LinkLabel();
             ContentaTextBox = new TextBox();
+            statusStrip = new StatusStrip();
+            toolStripStatusLabel = new ToolStripStatusLabel();
+            statusStrip.SuspendLayout();
             SuspendLayout();
             // 
             // progressBar1
@@ -70,20 +73,38 @@
             ContentaTextBox.Name = "ContentaTextBox";
             ContentaTextBox.ReadOnly = true;
             ContentaTextBox.ScrollBars = ScrollBars.Vertical;
-            ContentaTextBox.Size = new Size(776, 380);
+            ContentaTextBox.Size = new Size(776, 367);
             ContentaTextBox.TabIndex = 4;
+            // 
+            // statusStrip
+            // 
+            statusStrip.Items.AddRange(new ToolStripItem[] { toolStripStatusLabel });
+            statusStrip.Location = new Point(0, 428);
+            statusStrip.Name = "statusStrip";
+            statusStrip.Size = new Size(800, 22);
+            statusStrip.TabIndex = 6;
+            statusStrip.Text = "statusStrip1";
+            // 
+            // toolStripStatusLabel
+            // 
+            toolStripStatusLabel.Name = "toolStripStatusLabel";
+            toolStripStatusLabel.Size = new Size(118, 17);
+            toolStripStatusLabel.Text = "toolStripStatusLabel1";
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(statusStrip);
             Controls.Add(ContentaTextBox);
             Controls.Add(lnkOpen);
             Controls.Add(btnFetch);
             Controls.Add(progressBar1);
             Name = "MainForm";
             Text = "Form1";
+            statusStrip.ResumeLayout(false);
+            statusStrip.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -94,5 +115,7 @@
         private Button btnFetch;
         private LinkLabel lnkOpen;
         private TextBox ContentaTextBox;
+        private StatusStrip statusStrip;
+        private ToolStripStatusLabel toolStripStatusLabel;
     }
 }
