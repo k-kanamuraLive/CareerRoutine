@@ -55,10 +55,7 @@ namespace CareerRoutine
             progressBar1.Value = 0;
             var progress = new Progress<int>(v => progressBar1.Value = v);
 
-            // カーソルがあればその日時以降のメールのみ取得
-            DateTime? cursorDate = _cursor?.ReceivedAt;
-
-            var jobs = await _fetcher.FetchAsync(progress, cursorDate);
+            var jobs = await _fetcher.FetchAsync(progress, _cursor);
             _today = _matcher.PickOne(jobs);
 
 #if DEBUG

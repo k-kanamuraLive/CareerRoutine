@@ -13,17 +13,18 @@ namespace CareerRoutine.Services
         // cursorDate が指定された場合、その日時より後のメールのみ取得する
         public async Task<List<Job>> FetchAsync(
             IProgress<int>? progress = null,
-            DateTime? cursorDate = null)
+            Job? cursor = null)
         {
             var service = await GmailServiceFactory.CreateServiceAsync();
 
             var request = service.Users.Messages.List("me");
 
             // カーソルが存在する場合は after: クエリを追加
-            if (cursorDate.HasValue)
+            if (cursor != null)
             {
-                long unixSec = new DateTimeOffset(cursorDate.Value)
+                long unixSec = new DateTimeOffset(cursor.ReceivedAt, TimeZoneInfo.Local.GetUtcOffset(cursor.ReceivedAt))
                     .ToUnixTimeSeconds() + 1;
+
                 request.Q = $"in:inbox after:{unixSec}";
                 // 上限はデフォルト（100件）のまま
             }
