@@ -40,7 +40,7 @@ namespace CareerRoutine
                     int count = await _labelService.CountAfterCursorAsync(_cursor);
                     toolStripStatusLabel.Text =
                         $"カーソル以降の新着: {count} 件  " +
-                        $"（最終確認: {_cursor.ReceivedAt:yyyy/MM/dd HH:mm}）";
+                        $"（最終確認: {_cursor.ReceivedAtLocal:yyyy/MM/dd HH:mm}）";
                 }
             }
             catch (Exception ex)
@@ -100,7 +100,7 @@ namespace CareerRoutine
                 int count = await _labelService.CountAfterCursorAsync(_cursor);
                 toolStripStatusLabel.Text =
                     $"カーソル以降の新着: {count} 件  " +
-                    $"（最終確認: {_cursor.ReceivedAt:yyyy/MM/dd HH:mm}）";
+                    $"（最終確認: {_cursor.ReceivedAtLocal:yyyy/MM/dd HH:mm}）";
             }
             catch (Exception ex)
             {

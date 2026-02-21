@@ -12,7 +12,7 @@ namespace CareerRoutine.Services
             // スキルにマッチするものだけ抽出
             var matched = jobs
                 .Where(j => IsSkillMatch(j))
-                .OrderByDescending(j => j.ReceivedAt)
+                .OrderByDescending(j => j.InternalDate)
                 .FirstOrDefault();
 
             return matched; // マッチがなければ null

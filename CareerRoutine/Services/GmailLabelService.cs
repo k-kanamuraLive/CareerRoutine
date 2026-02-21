@@ -70,10 +70,7 @@ namespace CareerRoutine.Services
             return new Job
             {
                 MessageId = msg.Id,
-                ReceivedAt = DateTimeOffset
-                    .FromUnixTimeMilliseconds((long)msg.InternalDate!)
-                    .ToLocalTime()  // ← 日本時間
-                    .DateTime
+                InternalDate = (long)msg.InternalDate!
             };
         }
 
@@ -83,8 +80,7 @@ namespace CareerRoutine.Services
             var service = await GmailServiceFactory.CreateServiceAsync();
 
             // Gmail の after: は Unix 秒
-            long unixSec = new DateTimeOffset(cursor.ReceivedAt, TimeZoneInfo.Local.GetUtcOffset(cursor.ReceivedAt))
-                .ToUnixTimeSeconds() + 1;
+            long unixSec = (cursor.InternalDate / 1000) + 1;
 
             var req = service.Users.Messages.List("me");
             req.Q = $"in:inbox after:{unixSec}";

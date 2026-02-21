@@ -10,7 +10,7 @@ namespace CareerRoutine.Analizers
             Trace.WriteLine("Title,Sender,ReceivedAt");
             foreach (var job in jobs)
             {
-                Trace.WriteLine($"\"{job.Title}\",\"{job.Sender}\",\"{job.ReceivedAt}\"");
+                Trace.WriteLine($"\"{job.Title}\",\"{job.Sender}\",\"{job.ReceivedAtLocal}\"");
             }
             return true;
         }

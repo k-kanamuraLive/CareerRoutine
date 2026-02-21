@@ -9,7 +9,14 @@ namespace CareerRoutine.Models
         public string BodyText { get; set; } = string.Empty;
         public string BodyHtml { get; set; } = string.Empty;
         public string Sender { get; set; } = string.Empty;
-        public DateTime ReceivedAt { get; set; }
+        // Gmail内部時間（Unixミリ秒）
+        public long InternalDate { get; set; }
+        // 人間表示用（UTC）
+        public DateTimeOffset ReceivedAtUtc =>
+            DateTimeOffset.FromUnixTimeMilliseconds(InternalDate);
+        // 人間表示用（ローカル）
+        public DateTimeOffset ReceivedAtLocal =>
+            ReceivedAtUtc.ToLocalTime();
 
         public string GetFullText()
         {

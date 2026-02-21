@@ -22,8 +22,7 @@ namespace CareerRoutine.Services
             // カーソルが存在する場合は after: クエリを追加
             if (cursor != null)
             {
-                long unixSec = new DateTimeOffset(cursor.ReceivedAt, TimeZoneInfo.Local.GetUtcOffset(cursor.ReceivedAt))
-                    .ToUnixTimeSeconds() + 1;
+                long unixSec = (cursor.InternalDate / 1000) + 1;
 
                 request.Q = $"in:inbox after:{unixSec}";
                 // 上限はデフォルト（100件）のまま
@@ -62,16 +61,13 @@ namespace CareerRoutine.Services
                     BodyText = text,
                     BodyHtml = html,
                     Sender = GetHeader(message, "From"),
-                    ReceivedAt = DateTimeOffset
-                        .FromUnixTimeMilliseconds((long)message.InternalDate!)
-                        .ToLocalTime()  // ← 日本時間
-                        .DateTime
+                    InternalDate = (long)message.InternalDate!
                 });
             }
 
-            // 追加の安全策：念のためカーソル以降のメールだけに絞る（API クエリで漏れがあった場合に備える）
+            // API クエリで漏れがある
             if (cursor != null)
-                jobs = jobs.Where(j => j.ReceivedAt > cursor.ReceivedAt).ToList();
+                jobs = jobs.Where(j => j.InternalDate > cursor.InternalDate).ToList();
 
             return jobs;
         }
