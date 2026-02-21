@@ -69,6 +69,10 @@ namespace CareerRoutine.Services
                 });
             }
 
+            // 追加の安全策：念のためカーソル以降のメールだけに絞る（API クエリで漏れがあった場合に備える）
+            if (cursor != null)
+                jobs = jobs.Where(j => j.ReceivedAt > cursor.ReceivedAt).ToList();
+
             return jobs;
         }
 
