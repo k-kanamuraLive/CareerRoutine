@@ -1,7 +1,9 @@
 ﻿using CareerRoutine.Models;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
+using Google.Apis.Requests;
 using Label = Google.Apis.Gmail.v1.Data.Label;
+using Message = Google.Apis.Gmail.v1.Data.Message;
 
 namespace CareerRoutine.Services
 {
@@ -9,7 +11,6 @@ namespace CareerRoutine.Services
     {
         private const string LabelName = "CareerRoutine.Selected";
 
-        // ===== ラベルIDを取得（なければ作成） =====
         public async Task<string> GetOrCreateLabelIdAsync()
         {
             var service = await GmailServiceFactory.CreateServiceAsync();
@@ -21,7 +22,6 @@ namespace CareerRoutine.Services
             if (existing != null)
                 return existing.Id;
 
-            // ラベルが存在しない場合は新規作成
             var newLabel = new Label
             {
                 Name = LabelName,
@@ -33,7 +33,6 @@ namespace CareerRoutine.Services
             return created.Id;
         }
 
-        // ===== メールにラベルを付与 =====
         public async Task ApplyLabelAsync(string messageId)
         {
             var service = await GmailServiceFactory.CreateServiceAsync();
@@ -47,49 +46,110 @@ namespace CareerRoutine.Services
             await service.Users.Messages.Modify(request, "me", messageId).ExecuteAsync();
         }
 
-        // ===== CareerRoutine.Selected が付いた最新メールを取得 =====
-        // 戻り値: カーソルとなる Job（見つからなければ null）
+        // 🔥 ラベル付き最新メール（internalDate最大）を取得
         public async Task<Job?> GetCursorJobAsync()
         {
             var service = await GmailServiceFactory.CreateServiceAsync();
             var labelId = await GetOrCreateLabelIdAsync();
 
-            var req = service.Users.Messages.List("me");
-            req.LabelIds = new Google.Apis.Util.Repeatable<string>(
-                new[] { labelId });
-            req.MaxResults = 1;
+            string? pageToken = null;
+            Job? newest = null;
 
-            var resp = await req.ExecuteAsync();
-            if (resp.Messages == null || !resp.Messages.Any())
-                return null;
-
-            var msg = await service.Users.Messages
-                .Get("me", resp.Messages[0].Id)
-                .ExecuteAsync();
-
-            return new Job
+            do
             {
-                MessageId = msg.Id,
-                InternalDate = (long)msg.InternalDate!
-            };
+                var req = service.Users.Messages.List("me");
+                req.LabelIds = new Google.Apis.Util.Repeatable<string>(
+                    new[] { labelId });
+                req.PageToken = pageToken;
+                req.MaxResults = 500;
+
+                var resp = await req.ExecuteAsync();
+
+                if (resp.Messages == null)
+                    break;
+
+                foreach (var msg in resp.Messages)
+                {
+                    var full = await service.Users.Messages
+                        .Get("me", msg.Id)
+                        .ExecuteAsync();
+
+                    var internalDate = (long)full.InternalDate!;
+
+                    if (newest == null || internalDate > newest.InternalDate)
+                    {
+                        newest = new Job
+                        {
+                            MessageId = full.Id,
+                            InternalDate = internalDate
+                        };
+                    }
+                }
+
+                pageToken = resp.NextPageToken;
+
+            } while (pageToken != null);
+
+            return newest;
         }
 
-        // ===== カーソルより後のメール件数を取得 =====
-        public async Task<int> CountAfterCursorAsync(Job cursor)
+        // 🔥 完全正確な件数取得
+        public async Task<int> CountAfterCursorAsync(
+            Job cursor,
+            IProgress<int>? progress = null)
         {
             var service = await GmailServiceFactory.CreateServiceAsync();
+            long unixSec = cursor.InternalDate / 1000;
 
-            // Gmail の after: は Unix 秒
-            long unixSec = (cursor.InternalDate / 1000) + 1;
+            int count = 0;
+            int processed = 0;
+            string? pageToken = null;
+            var allMessages = new List<string>();
 
-            var req = service.Users.Messages.List("me");
-            req.Q = $"in:inbox after:{unixSec}";
+            // 全メッセージIDを収集
+            do
+            {
+                var req = service.Users.Messages.List("me");
+                req.Q = $"in:inbox after:{unixSec}";
+                req.PageToken = pageToken;
+                req.MaxResults = 500;
+                var response = await req.ExecuteAsync();
 
-            // 件数だけ知りたいので最小限取得
-            req.MaxResults = 500;
+                if (response.Messages == null)
+                    break;
 
-            var resp = await req.ExecuteAsync();
-            return resp.Messages?.Count ?? 0;
+                allMessages.AddRange(response.Messages.Select(m => m.Id));
+                pageToken = response.NextPageToken;
+            } while (pageToken != null);
+
+            int total = allMessages.Count;
+
+            // 100件ずつBatchで InternalDate を取得
+            foreach (var chunk in allMessages.Chunk(100))
+            {
+                var batch = new BatchRequest(service);
+
+                foreach (var id in chunk)
+                {
+                    var getReq = service.Users.Messages.Get("me", id);
+                    getReq.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Minimal;
+                    getReq.Fields = "internalDate";
+
+                    batch.Queue<Message>(getReq, (result, error, index, message) =>
+                    {
+                        if (result?.InternalDate > cursor.InternalDate)
+                            Interlocked.Increment(ref count);
+
+                        int percent = (int)((double)Interlocked.Increment(ref processed) / total * 100);
+                        progress?.Report(Math.Min(percent, 100));
+                    });
+                }
+
+                await batch.ExecuteAsync();
+            }
+
+            progress?.Report(0);
+            return count;
         }
     }
 }

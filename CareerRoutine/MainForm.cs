@@ -37,7 +37,10 @@ namespace CareerRoutine
                 }
                 else
                 {
-                    int count = await _labelService.CountAfterCursorAsync(_cursor);
+                    toolStripProgressBar1.Value = 0;
+                    var progress = new Progress<int>(v => toolStripProgressBar1.Value = v);
+
+                    int count = await _labelService.CountAfterCursorAsync(_cursor,progress);
                     toolStripStatusLabel.Text =
                         $"カーソル以降の新着: {count} 件  " +
                         $"（最終確認: {_cursor.ReceivedAtLocal:yyyy/MM/dd HH:mm}）";

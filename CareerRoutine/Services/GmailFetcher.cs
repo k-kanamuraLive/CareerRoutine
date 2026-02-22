@@ -4,74 +4,89 @@ using System.Net;
 using System.Text;
 using Message = Google.Apis.Gmail.v1.Data.Message;
 using HtmlDocument = HtmlAgilityPack.HtmlDocument;
+using Google.Apis.Gmail.v1;
+using Google.Apis.Requests;
+using System.Collections.Concurrent;
 
 namespace CareerRoutine.Services
 {
     public class GmailFetcher
     {
-        // ===== メール取得 =====
-        // cursorDate が指定された場合、その日時より後のメールのみ取得する
         public async Task<List<Job>> FetchAsync(
             IProgress<int>? progress = null,
             Job? cursor = null)
         {
             var service = await GmailServiceFactory.CreateServiceAsync();
+            long unixSec = cursor != null ? cursor.InternalDate / 1000 : 0;
 
-            var request = service.Users.Messages.List("me");
+            // 全メッセージIDを収集
+            var allMessageIds = new List<string>();
+            string? pageToken = null;
 
-            // カーソルが存在する場合は after: クエリを追加
-            if (cursor != null)
+            do
             {
-                long unixSec = (cursor.InternalDate / 1000) + 1;
+                var req = service.Users.Messages.List("me");
+                req.Q = cursor != null ? $"in:inbox after:{unixSec}" : "in:inbox";
+                req.PageToken = pageToken;
+                req.MaxResults = 500;
+                var response = await req.ExecuteAsync();
 
-                request.Q = $"in:inbox after:{unixSec}";
-                // 上限はデフォルト（100件）のまま
-            }
-            else
+                if (response.Messages == null)
+                    break;
+
+                allMessageIds.AddRange(response.Messages.Select(m => m.Id));
+                pageToken = response.NextPageToken;
+            } while (pageToken != null);
+
+            int total = allMessageIds.Count;
+            int processed = 0;
+            var jobs = new ConcurrentBag<Job>();
+
+            // 100件ずつBatch
+            foreach (var chunk in allMessageIds.Chunk(100))
             {
-                request.Q = "in:inbox";
-            }
+                var batch = new BatchRequest(service);
 
-            var response = await request.ExecuteAsync();
-
-            var jobs = new List<Job>();
-
-            if (response.Messages == null)
-                return jobs;
-
-            int total = response.Messages.Count;
-            int current = 0;
-
-            foreach (var msg in response.Messages)
-            {
-                current++;
-                progress?.Report(current * 100 / total);
-
-                var message =
-                    await service.Users.Messages
-                        .Get("me", msg.Id)
-                        .ExecuteAsync();
-
-                var (text, html) = ExtractBody(message);
-
-                jobs.Add(new Job
+                foreach (var id in chunk)
                 {
-                    MessageId = message.Id,
-                    Title = GetHeader(message, "Subject"),
-                    BodyText = text,
-                    BodyHtml = html,
-                    Sender = GetHeader(message, "From"),
-                    InternalDate = (long)message.InternalDate!
-                });
+                    var getReq = service.Users.Messages.Get("me", id);
+                    getReq.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Full;
+
+                    batch.Queue<Message>(getReq, (message, error, index, httpResponse) =>
+                    {
+                        if (error != null || message == null) return;
+
+                        long internalDate = (long)message.InternalDate!;
+
+                        // ミリ秒精度フィルタ
+                        if (cursor != null && internalDate <= cursor.InternalDate)
+                            return;
+
+                        var (text, html) = ExtractBody(message);
+                        jobs.Add(new Job
+                        {
+                            MessageId = message.Id,
+                            Title = GetHeader(message, "Subject"),
+                            BodyText = text,
+                            BodyHtml = html,
+                            Sender = GetHeader(message, "From"),
+                            InternalDate = internalDate
+                        });
+
+                        int percent = (int)((double)Interlocked.Increment(ref processed) / total * 100);
+                        progress?.Report(Math.Min(percent, 100));
+                    });
+                }
+
+                await batch.ExecuteAsync();
             }
 
-            // API クエリで漏れがある
-            if (cursor != null)
-                jobs = jobs.Where(j => j.InternalDate > cursor.InternalDate).ToList();
+            progress?.Report(100);
 
-            return jobs;
+            return jobs
+                .OrderBy(j => j.InternalDate)
+                .ToList();
         }
-
         private string GetHeader(Message message, string name)
         {
             return message.Payload.Headers
