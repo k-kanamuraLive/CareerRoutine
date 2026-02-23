@@ -11,7 +11,7 @@ namespace CareerRoutine
         private readonly SkillMatcher _matcher = new SkillMatcher();
         private readonly GmailLabelService _labelService = new GmailLabelService();
 
-        private Job? _today;
+        private Job? _today;  // 今日の1件（SkillMatcherで選ばれたもの）を保持するフィールド
         private Job? _cursor; // CareerRoutine.Selected が付いた最新メール
 
         public MainForm()

@@ -361,3 +361,12 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Google 認証情報（絶対にコミットしない）
+credentials.json
+token.json/
+
+# ビルド成果物
+bin/
+obj/
+/CareerRoutine/credentials.json
