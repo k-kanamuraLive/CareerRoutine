@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             progressBar1 = new ProgressBar();
             btnFetch = new Button();
             lnkOpen = new LinkLabel();
@@ -107,8 +108,9 @@
             Controls.Add(lnkOpen);
             Controls.Add(btnFetch);
             Controls.Add(progressBar1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "MainForm";
-            Text = "Form1";
+            Text = "気づいたら就活してた";
             statusStrip.ResumeLayout(false);
             statusStrip.PerformLayout();
             ResumeLayout(false);
