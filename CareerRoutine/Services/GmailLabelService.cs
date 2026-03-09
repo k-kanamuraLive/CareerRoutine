@@ -47,52 +47,30 @@ namespace CareerRoutine.Services
         }
 
         // 🔥 ラベル付き最新メール（internalDate最大）を取得
+        // ※新しい順に返ると仮定して、最初の1件を取るだけで最新メールを取得する方法
         public async Task<Job?> GetCursorJobAsync()
         {
             var service = await GmailServiceFactory.CreateServiceAsync();
             var labelId = await GetOrCreateLabelIdAsync();
 
-            string? pageToken = null;
-            Job? newest = null;
+            var req = service.Users.Messages.List("me");
+            req.LabelIds = new Google.Apis.Util.Repeatable<string>(new[] { labelId });
+            req.MaxResults = 1; // ← 最新1件だけ取得
 
-            do
+            var resp = await req.ExecuteAsync();
+            var msg = resp.Messages?.FirstOrDefault();
+            if (msg == null) return null;
+
+            var getReq = service.Users.Messages.Get("me", msg.Id);
+            getReq.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Metadata;
+            var full = await getReq.ExecuteAsync();
+
+            return new Job
             {
-                var req = service.Users.Messages.List("me");
-                req.LabelIds = new Google.Apis.Util.Repeatable<string>(
-                    new[] { labelId });
-                req.PageToken = pageToken;
-                req.MaxResults = 500;
-
-                var resp = await req.ExecuteAsync();
-
-                if (resp.Messages == null)
-                    break;
-
-                foreach (var msg in resp.Messages)
-                {
-                    var full = await service.Users.Messages
-                        .Get("me", msg.Id)
-                        .ExecuteAsync();
-
-                    var internalDate = (long)full.InternalDate!;
-
-                    if (newest == null || internalDate > newest.InternalDate)
-                    {
-                        newest = new Job
-                        {
-                            MessageId = full.Id,
-                            InternalDate = internalDate
-                        };
-                    }
-                }
-
-                pageToken = resp.NextPageToken;
-
-            } while (pageToken != null);
-
-            return newest;
+                MessageId = full.Id,
+                InternalDate = (long)full.InternalDate!
+            };
         }
-
         // 🔥 完全正確な件数取得
         public async Task<int> CountAfterCursorAsync(
             Job cursor,
