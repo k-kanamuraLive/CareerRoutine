@@ -25,6 +25,7 @@ namespace CareerRoutine.Services
             return Contains(fullText, "C++") ||
                    Contains(fullText, "VisualStudio") ||
                    Contains(fullText, "C#") ||
+                   Contains(fullText, "パッケージ") ||
                    Contains(fullText, "Windows");
         }
 
